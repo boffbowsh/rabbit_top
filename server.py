@@ -9,11 +9,12 @@ from twisted.web.http_headers import Headers
 
 from os import environ, path
 from urllib import quote
-import json, base64
+import json, base64, functools
 
 class Host:
   def __init__(self):
-    self.queues = []
+    self.queues = {}
+    self.subscribers = []
 
     contextFactory = QueueResource.WebClientContextFactory()
     self.agent = Agent(reactor, contextFactory, pool=HTTPConnectionPool(reactor, persistent=True))
@@ -31,7 +32,17 @@ class Host:
     loop.start(1, now=True)
 
   def cbBody(self, body):
-    self.queues = map(self.queueMap, json.loads(body))
+    updatedQueues = {}
+
+    for queue in map(self.queueMap, json.loads(body)):
+      if queue["name"] in self.queues and queue == self.queues[queue["name"]]:
+        pass
+      else:
+        updatedQueues[queue["name"]] = queue
+
+    self.queues.update(updatedQueues)
+    for subscriber in self.subscribers:
+      subscriber(updatedQueues)
 
   def cbRequest(self, response):
     return readBody(response).addCallback(self.cbBody)
@@ -52,6 +63,12 @@ class Host:
   def toJSON(self):
     return json.dumps(self.queues)
 
+  def registerSubscriber(self, subscriber):
+    self.subscribers.append(subscriber)
+
+  def unregisterSubscriber(self, subscriber):
+    self.subscribers.remove(subscriber)
+
 class QueueResource(Resource):
   class WebClientContextFactory(ClientContextFactory):
     def getContext(self, hostname, port):
@@ -63,12 +80,30 @@ class QueueResource(Resource):
 
   def render_GET(self, request):
     request.setHeader("content-type", "application/json")
+    request.setResponseCode(200)
     return self.host.toJSON()
+
+class Subscriber(Resource):
+  def __init__(self, host):
+    self.requests = []
+    host.registerSubscriber(self.receiveUpdate)
+    Resource.__init__(self)
+
+  def render_GET(self, request):
+    request.setHeader("content-type", "text/event-stream; charset=utf-8")
+    request.setResponseCode(200)
+    self.requests.append(request)
+    return NOT_DONE_YET
+
+  def receiveUpdate(self, data):
+    for request in self.requests:
+      request.write("data: %s\r\n\r\n" % json.dumps(data))
 
 if __name__ == "__main__":
   host = Host()
   root = File(path.abspath("./public"))
   root.putChild("queues.json", QueueResource(host))
+  root.putChild("subscribe", Subscriber(host))
 
   reactor.listenTCP(int(environ.get("PORT", 8000)), Site(root))
   reactor.run()
