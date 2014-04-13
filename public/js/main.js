@@ -4,7 +4,7 @@
     $.extend(this.data, object);
     $("tbody").empty();
     Object.keys(this.data).sort(function (a, b) {
-      return a.name > b.name ? 1 : -1;
+      return a > b ? 1 : -1;
     }).forEach(function (queueName){
       var queue = queues.data[queueName];
       var row = $("<tr>");
