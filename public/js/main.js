@@ -1,4 +1,25 @@
 (function($) {
+  var queues = {data: {}};
+  queues.update = function(object) {
+    $.extend(this.data, object);
+    $("tbody").empty();
+    Object.keys(this.data).sort(function (a, b) {
+      return a.name > b.name ? 1 : -1;
+    }).forEach(function (queueName){
+      var queue = queues.data[queueName];
+      var row = $("<tr>");
+      row.append($("<td>").text(queue.name));
+      staticColumns.forEach(function(key) {
+        row.append($("<td>").text(parseInt(queue[key])));
+      });
+
+      var etcEl = $("<td>");
+      etcEl.html(formatTime(queue.messages / (queue.out_rate - queue.in_rate)));
+      row.append(etcEl);
+      $("tbody").append(row);
+    });
+  }
+
   var staticColumns = ["messages", "unacked", "consumers", "in_rate", "out_rate"]
 
   function formatTime(seconds) {
@@ -19,30 +40,24 @@
     }
   }
 
-  function update() {
+  function initializeQueues() {
     $.ajax({
-      url: "/queues.json",
+      url: "queues.json",
       dataType: "json",
       success: function(data) {
-        $("tbody").empty();
-        data.sort(function (a, b) {
-          return a.name > b.name ? 1 : -1;
-        }).forEach(function (queue){
-          var row = $("<tr>");
-          row.append($("<td>").text(queue.name));
-          staticColumns.forEach(function(key) {
-            row.append($("<td>").text(parseInt(queue[key])));
+        queues.update(data);
+        if (!!window.EventSource) {
+          var source = new EventSource('subscribe');
+          source.addEventListener("message", function(e) {
+            console.log(e.data);
+            queues.update(JSON.parse(e.data));
           });
-
-          var etcEl = $("<td>");
-          etcEl.html(formatTime(queue.messages / (queue.out_rate - queue.in_rate)));
-          row.append(etcEl);
-          $("tbody").append(row);
-        });
-        setTimeout(update, 1000);
+        } else {
+          setTimeout(1000, initializeQueues);
+        }
       }
     });
   }
 
-  $(document).ready(update);
+  $(document).ready(initializeQueues);
 })(jQuery);
