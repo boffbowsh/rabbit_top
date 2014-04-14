@@ -52,8 +52,8 @@ class Host:
             "messages": queue["messages"],
             "unacked": queue["messages_unacknowledged"],
             "consumers": queue["consumers"],
-            "in_rate": queue["message_stats"]["publish_details"]["rate"],
-            "out_rate": queue["message_stats"]["ack_details"]["rate"]}
+            "in_rate": queue.get("message_stats",{}).get("publish_details",{}).get("rate",0),
+            "out_rate": queue.get("message_stats",{}).get("deliver_get_details",{}).get("rate",0)}
 
   def update(self):
     d = self.agent.request("GET", self.url, self.headers)

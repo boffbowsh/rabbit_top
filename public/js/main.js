@@ -1,4 +1,5 @@
 (function($) {
+  var queueTemplate;
   var queues = {data: {}};
   queues.update = function(object) {
     $.extend(this.data, object);
@@ -7,40 +8,15 @@
       return a > b ? 1 : -1;
     }).forEach(function (queueName){
       var queue = queues.data[queueName];
-      var row = $("<tr>");
-      row.append($("<td>").text(queue.name));
-      staticColumns.forEach(function(key) {
-        row.append($("<td>").text(parseInt(queue[key])));
-      });
-
-      var etcEl = $("<td>");
-      etcEl.html(formatTime(queue.messages / (queue.out_rate - queue.in_rate)));
-      row.append(etcEl);
-      $("tbody").append(row);
+      queue.etc = queue.messages / (queue.out_rate - queue.in_rate);
+      $("tbody").append(queueTemplate({queue: queue}));
     });
   }
 
   var staticColumns = ["messages", "unacked", "consumers", "in_rate", "out_rate"]
 
-  function formatTime(seconds) {
-    if (seconds === Infinity || seconds < 0) {
-      return "&infin;";
-    } else {
-      var time = new Date(seconds*1000);
-      if (isNaN(time.valueOf()) || time < 1000) {
-        return "";
-      } else {
-        return [time.getUTCHours(),
-                time.getUTCMinutes(),
-                time.getUTCSeconds()].map(function (digits) {
-                  digits = digits.toString();
-                  return digits.length == 2 ? digits : "0" + digits;
-                }).join(":");
-      }
-    }
-  }
-
   function initializeQueues() {
+    queueTemplate = Handlebars.compile($("#queue-template").html());
     $.ajax({
       url: "queues.json",
       dataType: "json",
@@ -49,7 +25,6 @@
         if (!!window.EventSource) {
           var source = new EventSource('subscribe');
           source.addEventListener("message", function(e) {
-            console.log(e.data);
             queues.update(JSON.parse(e.data));
           });
         } else {
@@ -61,3 +36,33 @@
 
   $(document).ready(initializeQueues);
 })(jQuery);
+
+Handlebars.registerHelper("etcLabel", function(etc) {
+  if (etc === Infinity || etc < 0) {
+    return "danger";
+  } else if (etc < 1) {
+    return "";
+  } else if (etc < 60) {
+    return "info";
+  } else {
+    return "warning";
+  }
+});
+
+Handlebars.registerHelper("etcFormat", function(etc) {
+  if (etc === Infinity || etc < 0) {
+    return new Handlebars.SafeString("&infin;");
+  } else {
+    var time = new Date(etc*1000);
+    if (isNaN(time.valueOf()) || time < 1000) {
+      return "";
+    } else {
+      return [time.getUTCHours(),
+              time.getUTCMinutes(),
+              time.getUTCSeconds()].map(function (digits) {
+                digits = digits.toString();
+                return digits.length == 2 ? digits : "0" + digits;
+              }).join(":");
+    }
+  }
+});

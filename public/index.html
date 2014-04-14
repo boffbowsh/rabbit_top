@@ -41,14 +41,24 @@
             <tr>
               <td>Queue</td>
               <td>Messages</td>
-              <td>Unacked</td>
-              <td>Consumers</td>
+              <td class="hidden-xs">Unacked</td>
+              <td class="hidden-xs">Consumers</td>
               <td>In/s</td>
               <td>Out/s</td>
               <td>ETC</td>
             </tr>
           </thead>
           <tbody>
+            <script id="queue-template" type="text/x-handlebars-template">
+              <tr>
+                <td>{{queue.name}}</td>
+                <td>{{queue.messages}}</td>
+                <td class="hidden-xs">{{queue.unacked}}</td>
+                <td class="hidden-xs">{{queue.consumers}}</td>
+                <td>{{queue.in_rate}}</td>
+                <td>{{queue.out_rate}}</td>
+                <td><span class="label label-{{etcLabel queue.etc}}">{{etcFormat queue.etc}}</span></td>
+            </script>
           </tbody>
         </table>
 
@@ -56,6 +66,7 @@
       </div> <!-- /container -->
       <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
       <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.11.0.min.js"><\/script>')</script>
+      <script src="js/vendor/handlebars-1.1.2.js"></script>
 
       <script src="js/vendor/bootstrap.min.js"></script>
 
