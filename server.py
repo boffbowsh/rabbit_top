@@ -21,7 +21,8 @@ class Host:
 
     headers = {"User-Agent": ["RabbitTop/0.1"]}
     if environ.get("RMQ_API_USER") and environ.get("RMQ_API_PASS"):
-      headers.update({"Authorization": ["Basic %s" % base64.b64encode("monitor:p33kab00")]})
+      auth = base64.b64encode("%s:%s" % (environ.get("RMQ_API_USER"), environ.get("RMQ_API_PASS")))
+      headers.update({"Authorization": ["Basic %s" % auth]})
     self.headers = Headers(headers)
     self.url = "%s/api/queues/%s" % (
       environ.get("RMQ_API_URL").rstrip("/"),
