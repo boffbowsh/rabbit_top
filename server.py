@@ -49,12 +49,13 @@ class Host:
     return readBody(response).addCallback(self.cbBody)
 
   def queueMap(self, queue):
-    return {"name": queue["name"],
-            "messages": queue["messages"],
-            "unacked": queue["messages_unacknowledged"],
-            "consumers": queue["consumers"],
-            "in_rate": queue.get("message_stats",{}).get("publish_details",{}).get("rate",0),
-            "out_rate": queue.get("message_stats",{}).get("deliver_get_details",{}).get("rate",0)}
+    return {"name": queue.get('name', ''),
+            "messages": queue.get('messages', ''),
+            "unacked": queue.get('messages_unacknowledged', ''),
+            "consumers": queue.get('consumers', ''),
+            "in_rate": queue.get('message_stats', {}).get('publish_details', {}).get('rate', 0),
+            "out_rate": queue.get('message_stats', {}).get(
+              'deliver_get_details', {}).get('rate', 0)}
 
   def update(self):
     d = self.agent.request("GET", self.url, self.headers)
